@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Laboratorio ALS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/recharts/umd/Recharts.min.js"></script>
+</head>
+<body class="bg-white text-gray-800">
+  <div class="max-w-6xl mx-auto p-4">
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+      <div class="flex items-center gap-4">
+        <img src="logo-als.png" alt="Logo ALS" class="h-10" />
+        <h1 class="text-3xl font-bold text-blue-700">Laboratorio ALS</h1>
+      </div>
+      <nav class="space-x-4 text-gray-600">
+        <a href="#">Inicio</a>
+        <a href="#">Reportes</a>
+        <a href="#">Usuarios</a>
+        <a href="#">Configuración</a>
+      </nav>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" id="form-section">
+      <div>
+        <label class="block font-semibold">Nombre del Analista</label>
+        <input type="text" id="nombre" class="border rounded w-full p-2" />
+      </div>
+      <div>
+        <label class="block font-semibold">Área</label>
+        <input type="text" id="area" class="border rounded w-full p-2" />
+      </div>
+      <div>
+        <label class="block font-semibold">Folio de análisis</label>
+        <input type="text" id="folio" class="border rounded w-full p-2" />
+      </div>
+      <div>
+        <label class="block font-semibold">Producto</label>
+        <input type="text" id="producto" class="border rounded w-full p-2" />
+      </div>
+      <div>
+        <label class="block font-semibold">Cliente</label>
+        <input type="text" id="cliente" class="border rounded w-full p-2" />
+      </div>
+      <div>
+        <label class="block font-semibold">Prueba</label>
+        <input type="text" id="prueba" class="border rounded w-full p-2" />
+      </div>
+      <div class="md:col-span-2">
+        <label class="block font-semibold">Tiempo en Bitácora (min)</label>
+        <input type="number" id="bitacora" class="border rounded w-full p-2" />
+      </div>
+    </div>
+
+    <div class="flex gap-4 mb-4">
+      <button onclick="guardarDatos()" class="bg-blue-700 text-white px-4 py-2 rounded">Guardar</button>
+      <button onclick="exportarExcel()" class="border border-blue-700 text-blue-700 px-4 py-2 rounded">Exportar Excel</button>
+    </div>
+
+    <div class="bg-gray-100 p-4 rounded">
+      <h2 class="text-xl font-semibold mb-4">Dashboard de tiempos por etapa</h2>
+      <div id="grafico" style="width:100%; height:400px;"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'https://cdn.jsdelivr.net/npm/recharts/esm/index.js';
+  </script>
+  <script>
+    const campos = ["nombre", "area", "folio", "producto", "cliente", "prueba", "bitacora"];
+
+    function guardarDatos() {
+      const data = {};
+      campos.forEach(campo => {
+        data[campo] = document.getElementById(campo).value;
+      });
+      localStorage.setItem("datosALS", JSON.stringify(data));
+      renderGrafico(data);
+      alert("Datos guardados");
+    }
+
+    function exportarExcel() {
+      const data = JSON.parse(localStorage.getItem("datosALS") || "{}");
+      const sheet = XLSX.utils.json_to_sheet([data]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, sheet, "Registro");
+      XLSX.writeFile(wb, "ALS_Tiempos.xlsx");
+    }
+
+    function renderGrafico(data) {
+      const chartData = [
+        { etapa: "Bitácora", tiempo: Number(data.bitacora) || 0 }
+      ];
+
+      const container = document.getElementById("grafico");
+      container.innerHTML = "";
+
+      const svgNS = "http://www.w3.org/2000/svg";
+      const width = container.clientWidth;
+      const height = 300;
+      const max = Math.max(...chartData.map(d => d.tiempo), 100);
+
+      const svg = document.createElementNS(svgNS, "svg");
+      svg.setAttribute("width", width);
+      svg.setAttribute("height", height);
+
+      chartData.forEach((d, i) => {
+        const barHeight = (d.tiempo / max) * (height - 40);
+        const barWidth = 60;
+        const x = i * 80 + 50;
+        const y = height - barHeight - 20;
+
+        const rect = document.createElementNS(svgNS, "rect");
+        rect.setAttribute("x", x);
+        rect.setAttribute("y", y);
+        rect.setAttribute("width", barWidth);
+        rect.setAttribute("height", barHeight);
+        rect.setAttribute("fill", "#1D4ED8");
+
+        const label = document.createElementNS(svgNS, "text");
+        label.setAttribute("x", x + barWidth / 2);
+        label.setAttribute("y", height - 5);
+        label.setAttribute("text-anchor", "middle");
+        label.textContent = d.etapa;
+
+        svg.appendChild(rect);
+        svg.appendChild(label);
+      });
+
+      container.appendChild(svg);
+    }
+
+    window.onload = () => {
+      const datos = JSON.parse(localStorage.getItem("datosALS") || "{}");
+      campos.forEach(c => {
+        if (datos[c]) document.getElementById(c).value = datos[c];
+      });
+      renderGrafico(datos);
+    };
+  </script>
+</body>
+</html>
